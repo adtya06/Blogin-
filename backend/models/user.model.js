@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const brycrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
@@ -26,18 +26,25 @@ const userSchema = new mongoose.Schema({
 },
 { timestamps: true }) 
 
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
 userSchema.methods.generateAuthToken = function() {
     const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET);
     return token;
 }
 
 userSchema.methods.comparePassword = async function(password) {
-    return await brycrypt.compare(password, this.password);
-}
-
-userSchema.statics.hashPassword = async function(password) {
-    const salt = await brycrypt.genSalt(10);
-    return await brycrypt.hash(password, salt);
+    return await bcrypt.compare(password, this.password);
 }
 
 const userModel = mongoose.model('User', userSchema);
