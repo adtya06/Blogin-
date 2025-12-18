@@ -52,6 +52,11 @@ module.exports.loginUser = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
         const token = user.generateAuthToken();
 
         res.status(200).json({

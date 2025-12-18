@@ -69,17 +69,17 @@ module.exports.updatePost = async (req, res) => {
 
 module.exports.deletePost = async (req, res) => {
     try {
-        const post = postModel.findById(req.params.id);
+        const post = await postModel.findById(req.params.id);
 
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
 
-        if (post.author.toString() !== req.user._id) {
+        if (post.author.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Not authorized to delete this post' });
         }
 
-        await post.remove();
+        await postModel.findByIdAndDelete(req.params.id);
         res.status(200).json({ message: 'Post deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting post', error });

@@ -1,0 +1,140 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../src/context/AuthContext';
+import { getPostById, updatePost } from '../src/api';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const EditPostPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [formData, setFormData] = useState({ title: '', content: '' });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchPost = async () => {
+      try {
+        const post = await getPostById(id);
+        
+        // Check if user owns this post
+        if (post.author._id !== user.id) {
+          setError('You are not authorized to edit this post.');
+          setTimeout(() => navigate('/'), 2000);
+          return;
+        }
+
+        setFormData({ title: post.title, content: post.content });
+        setLoading(false);
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || 'Failed to fetch post.';
+        setError(errorMessage);
+        setTimeout(() => navigate('/'), 2000);
+      }
+    };
+
+    fetchPost();
+  }, [id, user, navigate]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await updatePost(id, formData);
+      navigate('/');
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to update post. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user) {
+    return null; // Will redirect
+  }
+
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Edit Post</h1>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4" role="alert">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+              Title
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter post title"
+              value={formData.title}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+              Content
+            </label>
+            <textarea
+              id="content"
+              name="content"
+              required
+              rows="10"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Write your post content here..."
+              value={formData.content}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-blue-300"
+            >
+              {submitting ? 'Updating...' : 'Update Post'}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="flex-1 bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default EditPostPage;
