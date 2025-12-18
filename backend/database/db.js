@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 function connectDB() {
+    mongoose.connection.once("open", () => {
+    console.log("✅ Connected to MongoDB Atlas");
+    });
+
     mongoose.connect(process.env.DB_CONNECT)
         .then(() => {
             console.log('Connected to MongoDB');
